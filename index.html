@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agents Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'display': ['Space Grotesk', 'Noto Sans Arabic', 'sans-serif'],
+                        'body': ['Noto Sans Arabic', 'Space Grotesk', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        'void': '#030308',
+                        'surface': '#0a0a12',
+                        'surface-elevated': '#12121f',
+                        'surface-hover': '#1a1a2e',
+                        'electric': '#00f0ff',
+                        'neon-purple': '#b829dd',
+                        'neon-pink': '#ff2d95',
+                        'neon-blue': '#2979ff',
+                        'neon-green': '#00e676',
+                        'neon-amber': '#ffab00',
+                        'text-primary': '#f0f0f5',
+                        'text-secondary': '#8b8b9e',
+                        'text-muted': '#4a4a5e',
+                        'border-subtle': 'rgba(255,255,255,0.06)',
+                        'border-hover': 'rgba(255,255,255,0.12)',
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        * { scrollbar-width: thin; scrollbar-color: rgba(0,240,255,0.2) transparent; }
+        *::-webkit-scrollbar { width: 6px; }
+        *::-webkit-scrollbar-track { background: transparent; }
+        *::-webkit-scrollbar-thumb { background: rgba(0,240,255,0.2); border-radius: 3px; }
+        *::-webkit-scrollbar-thumb:hover { background: rgba(0,240,255,0.4); }
+
+        body { 
+            background: #030308; 
+            font-family: 'Noto Sans Arabic', 'Space Grotesk', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .glass {
+            background: rgba(10, 10, 18, 0.6);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .glass-strong {
+            background: rgba(18, 18, 31, 0.85);
+            backdrop-filter: blur(30px) saturate(200%);
+            -webkit-backdrop-filter: blur(30px) saturate(200%);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #00f0ff, #b829dd, #ff2d95);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 8s ease infinite;
+        }
+
+        .text-gradient-blue {
+            background: linear-gradient(135deg, #00f0ff, #2979ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .mesh-gradient {
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(0,240,255,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(184,41,221,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(255,45,149,0.05) 0%, transparent 60%);
+        }
+
+        .typing-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #00f0ff;
+            animation: typingBounce 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-10px); opacity: 1; }
+        }
+
+        .code-block {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(0,240,255,0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .agent-card-selected {
+            border-color: rgba(0,240,255,0.5) !important;
+            box-shadow: 0 0 30px rgba(0,240,255,0.15), inset 0 0 30px rgba(0,240,255,0.05) !important;
+        }
+
+        .model-selected {
+            border-color: rgba(184,41,221,0.5) !important;
+            background: rgba(184,41,221,0.08) !important;
+        }
+
+        #three-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .message-enter {
+            animation: messageEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes messageEnter {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(2deg); }
+        }
+
+        @keyframes slideUp {
+            0% { opacity: 0; transform: translateY(40px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+            0% { opacity: 0; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes typeCursor {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-scale-in { animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-type-cursor { animation: typeCursor 0.8s step-end infinite; }
+    </style>
+</head>
+<body class="text-text-primary min-h-screen">
+    <canvas id="three-canvas"></canvas>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // ==================== THREE.JS BACKGROUND ====================
+        const initThreeBackground = () => {
+            const canvas = document.getElementById('three-canvas');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 800;
+            const posArray = new Float32Array(particlesCount * 3);
+            const colorArray = new Float32Array(particlesCount * 3);
+
+            for(let i = 0; i < particlesCount * 3; i += 3) {
+                posArray[i] = (Math.random() - 0.5) * 20;
+                posArray[i+1] = (Math.random() - 0.5) * 20;
+                posArray[i+2] = (Math.random() - 0.5) * 20;
+
+                const colorChoice = Math.random();
+                if(colorChoice < 0.33) {
+                    colorArray[i] = 0; colorArray[i+1] = 0.94; colorArray[i+2] = 1;
+                } else if(colorChoice < 0.66) {
+                    colorArray[i] = 0.72; colorArray[i+1] = 0.16; colorArray[i+2] = 0.87;
+                } else {
+                    colorArray[i] = 1; colorArray[i+1] = 0.18; colorArray[i+2] = 0.58;
+                }
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.03,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+            });
+
+            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particlesMesh);
+
+            const spheres = [];
+            const sphereColors = [0x00f0ff, 0xb829dd, 0xff2d95];
+            for(let i = 0; i < 3; i++) {
+                const geometry = new THREE.SphereGeometry(0.5 + Math.random() * 0.5, 32, 32);
+                const material = new THREE.MeshBasicMaterial({
+                    color: sphereColors[i],
+                    transparent: true,
+                    opacity: 0.08,
+                });
+                const sphere = new THREE.Mesh(geometry, material);
+                sphere.position.set(
+                    (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 10
+                );
+                sphere.userData = {
+                    speed: 0.002 + Math.random() * 0.003,
+                    radius: 2 + Math.random() * 3,
+                    offset: Math.random() * Math.PI * 2
+                };
+                scene.add(sphere);
+                spheres.push(sphere);
+            }
+
+            camera.position.z = 5;
+
+            let mouseX = 0, mouseY = 0;
+            document.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+                mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+            });
+
+            const animate = () => {
+                requestAnimationFrame(animate);
+                particlesMesh.rotation.x += 0.0003;
+                particlesMesh.rotation.y += 0.0005;
+
+                const time = Date.now() * 0.001;
+                spheres.forEach((sphere) => {
+                    sphere.position.x = Math.sin(time * sphere.userData.speed + sphere.userData.offset) * sphere.userData.radius;
+                    sphere.position.y = Math.cos(time * sphere.userData.speed * 0.7 + sphere.userData.offset) * sphere.userData.radius * 0.5;
+                    sphere.position.z = Math.sin(time * sphere.userData.speed * 0.5 + sphere.userData.offset) * 2;
+                });
+
+                camera.position.x += (mouseX * 0.5 - camera.position.x) * 0.05;
+                camera.position.y += (-mouseY * 0.5 - camera.position.y) * 0.05;
+                camera.lookAt(scene.position);
+
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
+
+        // ==================== CONSTANTS & DATA ====================
+        const AGENTS = [
+            {
+                id: 'general',
+                name: 'المساعد العام',
+                nameEn: 'General Assistant',
+                icon: 'fa-brain',
+                color: '#00f0ff',
+                gradient: 'from-electric to-neon-blue',
+                desc: 'مساعد ذكي متعدد الاستخدامات يمكنه الإجابة على أي سؤال',
+                system: 'انت مساعد ذكي متعدد الاستخدامات. ساعد المستخدم في اي سؤال او مهمة يطلبها. اجب بالعربية دائما.',
+                tags: ['عام', 'مساعد']
+            },
+            {
+                id: 'coder',
+                name: 'المبرمج الخبير',
+                nameEn: 'Expert Coder',
+                icon: 'fa-code',
+                color: '#00e676',
+                gradient: 'from-neon-green to-emerald-400',
+                desc: 'متخصص في البرمجة وتصحيح الأخطاء وشرح المفاهيم التقنية',
+                system: 'انت مبرمج خبير. ساعد في كتابة الاكواد وتصحيح الاخطاء وشرح المفاهيم البرمجية. استخدم امثلة عملية وواضحة. اكتب الاكواد بشكل صحيح ومنسق.',
+                tags: ['برمجة', 'تطوير']
+            },
+            {
+                id: 'creative',
+                name: 'المبدع الإبداعي',
+                nameEn: 'Creative Genius',
+                icon: 'fa-wand-magic-sparkles',
+                color: '#ff2d95',
+                gradient: 'from-neon-pink to-rose-400',
+                desc: 'يساعدك في الكتابة الإبداعية وتوليد الأفكار المبتكرة',
+                system: 'انت كاتب ومبدع. ساعد في كتابة المحتوى الابداعي والقصص والشعر والافكار المبتكرة. كن مبدعا وملهما.',
+                tags: ['إبداع', 'كتابة']
+            },
+            {
+                id: 'teacher',
+                name: 'المعلم الذكي',
+                nameEn: 'Smart Teacher',
+                icon: 'fa-graduation-cap',
+                color: '#ffab00',
+                gradient: 'from-neon-amber to-orange-400',
+                desc: 'يشرح المفاهيم المعقدة بطريقة بسيطة مع أمثلة عملية',
+                system: 'انت معلم متخصص. شرح المفاهيم بطريقة بسيطة وواضحة مع امثلة عملية. كن صبورا وشجع المستخدم على التعلم.',
+                tags: ['تعليم', 'شرح']
+            },
+            {
+                id: 'analyst',
+                name: 'المحلل الذكي',
+                nameEn: 'Data Analyst',
+                icon: 'fa-chart-network',
+                color: '#2979ff',
+                gradient: 'from-neon-blue to-blue-400',
+                desc: 'يحلل البيانات ويستخلص الرؤى لاتخاذ قرارات مبنية على البيانات',
+                system: 'انت محلل بيانات. ساعد في تحليل البيانات وانشاء التقارير واستخلاص الرؤى والتوصيات. كن دقيقا ومنطقيا.',
+                tags: ['تحليل', 'بيانات']
+            },
+            {
+                id: 'writer',
+                name: 'الكاتب المحترف',
+                nameEn: 'Professional Writer',
+                icon: 'fa-pen-nib',
+                color: '#b829dd',
+                gradient: 'from-neon-purple to-violet-400',
+                desc: 'يساعد في كتابة المقالات والتقارير والمحتوى الاحترافي',
+                system: 'انت كاتب محترف. ساعد في كتابة المقالات والتقارير والرسائل الرسمية وتحسين الاسلوب الكتابي.',
+                tags: ['كتابة', 'محتوى']
+            }
+        ];
+
+        const MODELS = [
+            {
+                id: 'deepseek/deepseek-r1:free',
+                name: 'DeepSeek R1',
+                desc: 'تفكير عميق ومنطقي',
+                provider: 'DeepSeek',
+                icon: 'fa-brain',
+                color: '#00f0ff'
+            },
+            {
+                id: 'google/gemini-2.0-flash-exp:free',
+                name: 'Gemini 2.0 Flash',
+                desc: 'سريع ومتعدد الوسائط',
+                provider: 'Google',
+                icon: 'fa-bolt',
+                color: '#ffab00'
+            },
+            {
+                id: 'meta-llama/llama-3.3-70b-instruct:free',
+                name: 'Llama 3.3 70B',
+                desc: 'قوي ومتعدد اللغات',
+                provider: 'Meta',
+                icon: 'fa-layer-group',
+                color: '#00e676'
+            },
+            {
+                id: 'nvidia/llama-3.1-nemotron-70b-instruct:free',
+                name: 'Nemotron 70B',
+                desc: 'من NVIDIA - أداء ممتاز',
+                provider: 'NVIDIA',
+                icon: 'fa-microchip',
+                color: '#2979ff'
+            }
+        ];
+
+        const QUICK_PROMPTS = [
+            { icon: '🧠', text: 'اشرح لي مفهوم الذكاء الاصطناعي ببساطة' },
+            { icon: '🐍', text: 'اكتب لي كود Python لطباعة Hello World' },
+            { icon: '✍️', text: 'ساعدني في كتابة مقال عن التكنولوجيا' },
+            { icon: '📊', text: 'حلل لي هذه البيانات: 10, 20, 30, 40, 50' },
+            { icon: '🎨', text: 'أعطني فكرة تطبيق ويب مبتكر' },
+            { icon: '📚', text: 'اشرح لي كيفية تعلم البرمجة من الصفر' }
+        ];
+
+        // ==================== UTILITY FUNCTIONS ====================
+        const formatTime = () => {
+            return new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+        };
+
+        const formatMessage = (text) => {
+            if (!text) return '';
+            let formatted = text
+                .replace(/```([\s\S]*?)```/g, '<div class="code-block"><pre><code>$1</code></pre></div>')
+                .replace(/`([^`]+)`/g, '<code style="background:rgba(0,240,255,0.1);padding:2px 6px;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:0.85em;color:#00f0ff;">$1</code>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
+            return formatted;
+        };
+
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+
+        // ==================== COMPONENTS ====================
+
+        const Navbar = ({ onApiClick }) => {
+            const [scrolled, setScrolled] = useState(false);
+
+            useEffect(() => {
+                const handleScroll = () => setScrolled(window.scrollY > 50);
+                window.addEventListener('scroll', handleScroll);
+                return () => window.removeEventListener('scroll', handleScroll);
+            }, []);
+
+            return (
+                <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'glass-strong' : 'bg-transparent'}`}>
+                    <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00f0ff] to-[#b829dd] flex items-center justify-center shadow-lg shadow-[#00f0ff]/20">
+                                <i className="fas fa-robot text-white text-lg"></i>
+                            </div>
+                            <div>
+                                <h1 className="font-display font-bold text-lg leading-tight">AI Agents Hub</h1>
+                                <p className="text-[#4a4a5e] text-xs font-mono">v2.0.0</p>
+                            </div>
+                        </div>
+
+                        <div className="hidden md:flex items-center gap-8">
+                            {['الوكلاء', 'المحادثة', 'النماذج'].map((item, i) => (
+                                <a key={item} href={`#${['agents','chat','models'][i]}`} 
+                                   className="text-[#8b8b9e] hover:text-[#00f0ff] transition-colors text-sm font-medium relative group">
+                                    {item}
+                                    <span className="absolute -bottom-1 right-0 w-0 h-0.5 bg-[#00f0ff] transition-all group-hover:w-full"></span>
+                                </a>
+                            ))}
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button onClick={onApiClick} className="px-4 py-2 rounded-lg glass text-sm font-medium hover:border-[#00f0ff]/50 transition-all flex items-center gap-2 group">
+                                <i className="fas fa-key text-[#00f0ff] group-hover:rotate-12 transition-transform"></i>
+                                <span className="hidden sm:inline">مفتاح API</span>
+                            </button>
+                            <a href="https://github.com" target="_blank" 
+                               className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#00f0ff] to-[#2979ff] text-[#030308] font-bold text-sm hover:shadow-lg hover:shadow-[#00f0ff]/30 transition-all flex items-center gap-2">
+                                <i className="fab fa-github"></i>
+                                <span className="hidden sm:inline">GitHub</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+            );
+        };
+
+        const Hero = () => {
+            const [text, setText] = useState('');
+            const fullText = 'مرحباً بك في عالم الوكلاء الذكيين';
+
+            useEffect(() => {
+                let i = 0;
+                const interval = setInterval(() => {
+                    if (i <= fullText.length) {
+                        setText(fullText.slice(0, i));
+                        i++;
+                    } else {
+                        clearInterval(interval);
+                    }
+                }, 80);
+                return () => clearInterval(interval);
+            }, []);
+
+            return (
+                <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+                    <div className="max-w-5xl mx-auto text-center relative z-10">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8 animate-fade-in">
+                            <span className="w-2 h-2 rounded-full bg-[#00e676] animate-pulse"></span>
+                            <span className="text-sm text-[#8b8b9e]">منصة مجانية مفتوحة المصدر</span>
+                        </div>
+
+                        <h1 className="font-display font-black text-5xl md:text-7xl lg:text-8xl leading-tight mb-6">
+                            <span className="text-gradient">{text}</span>
+                            <span className="animate-type-cursor text-[#00f0ff]">|</span>
+                        </h1>
+
+                        <p className="text-[#8b8b9e] text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed animate-slide-up" style={{animationDelay:'0.2s',opacity:0}}>
+                            منصة متكاملة للوكلاء الذكيين مع دعم أحدث نماذج AI المجانية عبر OpenRouter. 
+                            اختر وكيلك المفضل وابدأ المحادثة فوراً — بدون خادم Backend، يعمل مباشرة على GitHub Pages.
+                        </p>
+
+                        <div className="flex flex-wrap justify-center gap-4 animate-slide-up" style={{animationDelay:'0.3s',opacity:0}}>
+                            <a href="#chat" className="px-8 py-4 rounded-2xl bg-gradient-to-r from-[#00f0ff] to-[#2979ff] text-[#030308] font-bold text-lg hover:shadow-xl hover:shadow-[#00f0ff]/40 transition-all transform hover:-translate-y-1 flex items-center gap-3">
+                                <i className="fas fa-rocket"></i>
+                                ابدأ الآن مجاناً
+                            </a>
+                            <a href="#agents" className="px-8 py-4 rounded-2xl glass text-[#f0f0f5] font-bold text-lg hover:border-[#00f0ff]/50 transition-all flex items-center gap-3">
+                                <i className="fas fa-users"></i>
+                                استكشف الوكلاء
+                            </a>
+                        </div>
+
+                        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto animate-slide-up" style={{animationDelay:'0.4s',opacity:0}}>
+                            {[
+                                { value: '6+', label: 'وكلاء ذكيين', icon: 'fa-users' },
+                                { value: '4', label: 'نماذج AI مجانية', icon: 'fa-microchip' },
+                                { value: '100%', label: 'مجاني ومفتوح', icon: 'fa-lock-open' },
+                                { value: '∞', label: 'محادثات غير محدودة', icon: 'fa-infinity' },
+                            ].map((stat, i) => (
+                                <div key={i} className="glass rounded-2xl p-4 hover:border-[#00f0ff]/30 transition-all">
+                                    <i className={`fas ${stat.icon} text-[#00f0ff] text-xl mb-2`}></i>
+                                    <div className="font-display font-black text-2xl text-gradient">{stat.value}</div>
+                                    <div className="text-[#4a4a5e] text-sm">{stat.label}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            );
+        };
+
+        const AgentCard = ({ agent, isSelected, onClick, index }) => {
+            return (
+                <div 
+                    onClick={onClick}
+                    className={`relative group cursor-pointer rounded-2xl p-6 transition-all duration-500 ${
+                        isSelected 
+                            ? 'agent-card-selected glass-strong' 
+                            : 'glass hover:border-[#00f0ff]/20'
+                    } animate-slide-up`}
+                    style={{ animationDelay: `${index * 0.1}s`, opacity: 0 }}
+                >
+                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-5 transition-opacity duration-500" 
+                         style={{background: `linear-gradient(135deg, ${agent.color}, transparent)`}}></div>
+
+                    <div className="relative z-10">
+                        <div className="flex items-start justify-between mb-4">
+                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110"
+                                 style={{background: `linear-gradient(135deg, ${agent.color}, ${agent.color}88)`}}>
+                                <i className={`fas ${agent.icon} text-white text-xl`}></i>
+                            </div>
+                            {isSelected && (
+                                <div className="w-6 h-6 rounded-full bg-[#00f0ff]/20 flex items-center justify-center">
+                                    <i className="fas fa-check text-[#00f0ff] text-xs"></i>
+                                </div>
+                            )}
+                        </div>
+
+                        <h3 className="font-display font-bold text-xl mb-1">{agent.name}</h3>
+                        <p className="text-[#4a4a5e] text-xs font-mono mb-1">{agent.nameEn}</p>
+                        <p className="text-[#8b8b9e] text-sm leading-relaxed mb-4">{agent.desc}</p>
+
+                        <div className="flex flex-wrap gap-2">
+                            {agent.tags.map(tag => (
+                                <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium bg-[#12121f] text-[#8b8b9e] border border-[rgba(255,255,255,0.06)]">
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const MessageBubble = ({ message, isUser }) => {
+            return (
+                <div className={`flex ${isUser ? 'justify-start' : 'justify-end'} message-enter`}>
+                    <div className={`max-w-[85%] md:max-w-[75%] ${isUser ? 'order-1' : 'order-2'}`}>
+                        <div className={`rounded-2xl px-5 py-4 ${
+                            isUser 
+                                ? 'bg-gradient-to-br from-[#00f0ff]/20 to-[#2979ff]/10 border border-[#00f0ff]/20' 
+                                : 'glass-strong'
+                        }`}>
+                            <div dangerouslySetInnerHTML={{__html: formatMessage(message.content)}} className="text-sm leading-relaxed" />
+                            <div className={`text-[10px] mt-2 font-mono ${isUser ? 'text-[#00f0ff]/60' : 'text-[#4a4a5e]'}`}>
+                                {formatTime()}
+                            </div>
+                        </div>
+                    </div>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mx-3 ${
+                        isUser 
+                            ? 'bg-gradient-to-br from-[#00f0ff] to-[#2979ff] order-2' 
+                            : 'bg-gradient-to-br from-[#b829dd] to-[#ff2d95] order-1'
+                    }`}>
+                        <i className={`fas ${isUser ? 'fa-user' : 'fa-robot'} text-white text-xs`}></i>
+                    </div>
+                </div>
+            );
+        };
+
+        const ChatInterface = ({ selectedAgent, selectedModel, apiKey, onApiRequired }) => {
+            const [messages, setMessages] = useState([]);
+            const [input, setInput] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const [streamingContent, setStreamingContent] = useState('');
+            const messagesEndRef = useRef(null);
+
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            };
+
+            useEffect(() => {
+                scrollToBottom();
+            }, [messages, streamingContent]);
+
+            const sendMessage = async (text = input) => {
+                if (!text.trim() || isLoading) return;
+                if (!apiKey) {
+                    onApiRequired();
+                    return;
+                }
+
+                const userMsg = { id: generateId(), role: 'user', content: text, time: Date.now() };
+                setMessages(prev => [...prev, userMsg]);
+                setInput('');
+                setIsLoading(true);
+                setStreamingContent('');
+
+                try {
+                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json',
+                            'HTTP-Referer': window.location.href,
+                            'X-Title': 'AI Agents Hub'
+                        },
+                        body: JSON.stringify({
+                            model: selectedModel,
+                            messages: [
+                                { role: 'system', content: selectedAgent.system },
+                                ...messages.slice(-8).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content })),
+                                { role: 'user', content: text }
+                            ],
+                            stream: true
+                        })
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let fullContent = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') continue;
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    const content = parsed.choices?.[0]?.delta?.content || '';
+                                    if (content) {
+                                        fullContent += content;
+                                        setStreamingContent(fullContent);
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                    }
+
+                    setMessages(prev => [...prev, { id: generateId(), role: 'bot', content: fullContent, time: Date.now() }]);
+                    setStreamingContent('');
+
+                } catch (error) {
+                    setMessages(prev => [...prev, { 
+                        id: generateId(),
+                        role: 'bot', 
+                        content: '❌ عذراً، حدث خطأ في الاتصال.\n\n**الحلول المقترحة:**\n1. تحقق من صحة مفتاح API\n2. تأكد من اتصالك بالإنترنت\n3. جرب نموذجاً آخر\n4. انتظر قليلاً ثم أعد المحاولة', 
+                        time: Date.now() 
+                    }]);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            const clearChat = () => {
+                if (confirm('هل تريد مسح المحادثة؟')) {
+                    setMessages([]);
+                    setStreamingContent('');
+                }
+            };
+
+            const exportChat = () => {
+                const text = messages.map(m => `${m.role === 'user' ? '👤 أنت' : '🤖 البوت'}:\n${m.content}\n\n${'='.repeat(50)}\n`).join('\n');
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `chat-${new Date().toISOString().slice(0,10)}.txt`;
+                a.click();
+            };
+
+            return (
+                <div className="glass-strong rounded-3xl overflow-hidden flex flex-col h-[650px]" id="chat">
+                    <div className="px-6 py-4 border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"
+                                 style={{background: `linear-gradient(135deg, ${selectedAgent.color}, ${selectedAgent.color}88)`}}>
+                                <i className={`fas ${selectedAgent.icon} text-white text-lg`}></i>
+                            </div>
+                            <div>
+                                <h3 className="font-display font-bold text-lg">{selectedAgent.name}</h3>
+                                <div className="flex items-center gap-2 text-xs text-[#4a4a5e]">
+                                    <span className="w-2 h-2 rounded-full bg-[#00e676] animate-pulse"></span>
+                                    <span>متصل الآن</span>
+                                    <span className="mx-1">•</span>
+                                    <span className="font-mono">{selectedModel.split('/')[1]?.split(':')[0] || selectedModel}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button onClick={clearChat} className="p-2.5 rounded-xl hover:bg-[#12121f] transition-colors text-[#4a4a5e] hover:text-[#ff2d95]" title="مسح المحادثة">
+                                <i className="fas fa-trash-alt"></i>
+                            </button>
+                            <button onClick={exportChat} className="p-2.5 rounded-xl hover:bg-[#12121f] transition-colors text-[#4a4a5e] hover:text-[#00f0ff]" title="تصدير المحادثة">
+                                <i className="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                        {messages.length === 0 && !isLoading && (
+                            <div className="h-full flex flex-col items-center justify-center text-center animate-fade-in">
+                                <div className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6 animate-float"
+                                     style={{background: 'linear-gradient(135deg, rgba(0,240,255,0.2), rgba(184,41,221,0.2))'}}>
+                                    <i className="fas fa-comments text-[#00f0ff] text-4xl"></i>
+                                </div>
+                                <h3 className="font-display font-bold text-2xl mb-2">ابدأ محادثتك الآن</h3>
+                                <p className="text-[#8b8b9e] mb-8 max-w-md">اختر وكيلاً من الأعلى وابدأ في الكتابة، أو اختر أحد الاقتراحات السريعة أدناه</p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg w-full">
+                                    {QUICK_PROMPTS.map((prompt, i) => (
+                                        <button 
+                                            key={i}
+                                            onClick={() => sendMessage(prompt.text)}
+                                            className="p-4 rounded-xl glass text-right hover:border-[#00f0ff]/30 transition-all group text-sm"
+                                        >
+                                            <span className="text-lg mr-2">{prompt.icon}</span>
+                                            <span className="text-[#8b8b9e] group-hover:text-[#f0f0f5] transition-colors">{prompt.text}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {messages.map((msg) => (
+                            <MessageBubble key={msg.id} message={msg} isUser={msg.role === 'user'} />
+                        ))}
+
+                        {streamingContent && (
+                            <MessageBubble message={{ content: streamingContent, time: Date.now() }} isUser={false} />
+                        )}
+
+                        {isLoading && !streamingContent && (
+                            <div className="flex justify-end">
+                                <div className="glass rounded-2xl px-5 py-4 flex items-center gap-3">
+                                    <div className="typing-dot"></div>
+                                    <div className="typing-dot"></div>
+                                    <div className="typing-dot"></div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div ref={messagesEndRef} />
+                    </div>
+
+                    <div className="px-6 py-4 border-t border-[rgba(255,255,255,0.06)]">
+                        <div className="flex items-end gap-3">
+                            <div className="flex-1 relative">
+                                <textarea
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            sendMessage();
+                                        }
+                                    }}
+                                    placeholder="اكتب رسالتك هنا... اضغط Enter للإرسال، Shift+Enter للسطر الجديد"
+                                    className="w-full bg-[#0a0a12] rounded-2xl px-5 py-4 pr-12 text-[#f0f0f5] placeholder-[#4a4a5e] resize-none outline-none border border-[rgba(255,255,255,0.06)] focus:border-[#00f0ff]/50 transition-all min-h-[56px] max-h-[200px]"
+                                    rows={1}
+                                />
+                                <button 
+                                    onClick={() => setInput('')}
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4a4a5e] hover:text-[#f0f0f5] transition-colors"
+                                >
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <button
+                                onClick={() => sendMessage()}
+                                disabled={isLoading || !input.trim()}
+                                className="w-14 h-14 rounded-2xl bg-gradient-to-r from-[#00f0ff] to-[#2979ff] flex items-center justify-center text-[#030308] shadow-lg shadow-[#00f0ff]/30 hover:shadow-xl hover:shadow-[#00f0ff]/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transform hover:scale-105 active:scale-95"
+                            >
+                                {isLoading ? (
+                                    <div className="w-5 h-5 border-2 border-[#030308]/30 border-t-[#030308] rounded-full animate-spin"></div>
+                                ) : (
+                                    <i className="fas fa-paper-plane text-lg"></i>
+                                )}
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between mt-3 text-xs text-[#4a4a5e]">
+                            <div className="flex items-center gap-4">
+                                <span><i className="fas fa-shield-alt mr-1"></i> مشفر وآمن</span>
+                                <span><i className="fas fa-bolt mr-1"></i> ردود فورية</span>
+                            </div>
+                            <span>{messages.length} رسالة</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ModelCard = ({ model, isSelected, onClick }) => {
+            return (
+                <div 
+                    onClick={onClick}
+                    className={`cursor-pointer rounded-xl p-4 transition-all duration-300 border ${
+                        isSelected 
+                            ? 'model-selected' 
+                            : 'border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)] glass'
+                    }`}
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" 
+                             style={{background: `${model.color}15`}}>
+                            <i className={`fas ${model.icon}`} style={{color: model.color}}></i>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                                <h4 className="font-display font-bold text-sm">{model.name}</h4>
+                                <span className="px-2 py-0.5 rounded-full bg-[#00e676]/10 text-[#00e676] text-[10px] font-bold">مجاني</span>
+                            </div>
+                            <p className="text-[#4a4a5e] text-xs mt-0.5 truncate">{model.desc}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 mt-3 text-[10px] text-[#4a4a5e] font-mono">
+                        <span><i className="fas fa-building mr-1"></i>{model.provider}</span>
+                    </div>
+                </div>
+            );
+        };
+
+        const ApiKeyModal = ({ isOpen, onClose, onSave, currentKey }) => {
+            const [key, setKey] = useState(currentKey);
+            const [showPassword, setShowPassword] = useState(false);
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+                    <div className="absolute inset-0 bg-[#030308]/80 backdrop-blur-sm"></div>
+                    <div className="relative glass-strong rounded-3xl p-8 max-w-md w-full animate-scale-in" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#00f0ff] to-[#b829dd] flex items-center justify-center">
+                                <i className="fas fa-key text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h2 className="font-display font-bold text-xl">إعداد مفتاح API</h2>
+                                <p className="text-[#4a4a5e] text-sm">OpenRouter API Key</p>
+                            </div>
+                        </div>
+
+                        <p className="text-[#8b8b9e] text-sm leading-relaxed mb-6">
+                            أدخل مفتاح OpenRouter API الخاص بك. يمكنك الحصول على مفتاح مجاني من 
+                            <a href="https://openrouter.ai/keys" target="_blank" className="text-[#00f0ff] hover:underline mx-1">openrouter.ai/keys</a>.
+                            المفتاح يُحفظ محلياً في متصفحك فقط.
+                        </p>
+
+                        <div className="relative mb-6">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={key}
+                                onChange={(e) => setKey(e.target.value)}
+                                placeholder="sk-or-v1-..."
+                                className="w-full bg-[#0a0a12] rounded-xl px-5 py-4 text-[#f0f0f5] placeholder-[#4a4a5e] outline-none border border-[rgba(255,255,255,0.06)] focus:border-[#00f0ff]/50 transition-all font-mono text-sm"
+                            />
+                            <button 
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4a4a5e] hover:text-[#f0f0f5] transition-colors"
+                            >
+                                <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                            </button>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-[rgba(255,255,255,0.06)] text-[#8b8b9e] hover:text-[#f0f0f5] hover:border-[rgba(255,255,255,0.12)] transition-all font-medium">
+                                إلغاء
+                            </button>
+                            <button 
+                                onClick={() => { onSave(key); onClose(); }}
+                                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#00f0ff] to-[#2979ff] text-[#030308] font-bold hover:shadow-lg hover:shadow-[#00f0ff]/30 transition-all"
+                            >
+                                حفظ المفتاح
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Footer = () => (
+            <footer className="border-t border-[rgba(255,255,255,0.06)] py-12 px-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                        <div>
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00f0ff] to-[#b829dd] flex items-center justify-center">
+                                    <i className="fas fa-robot text-white"></i>
+                                </div>
+                                <div>
+                                    <h3 className="font-display font-bold">AI Agents Hub</h3>
+                                    <p className="text-[#4a4a5e] text-xs">مركز الوكلاء الذكيين</p>
+                                </div>
+                            </div>
+                            <p className="text-[#8b8b9e] text-sm leading-relaxed">
+                                منصة متكاملة للوكلاء الذكيين مبنية بأحدث التقنيات. مجانية ومفتوحة المصدر بالكامل.
+                            </p>
+                        </div>
+                        <div>
+                            <h4 className="font-display font-bold mb-4">روابط سريعة</h4>
+                            <div className="space-y-2">
+                                {['الوكلاء', 'المحادثة', 'النماذج', 'GitHub'].map(link => (
+                                    <a key={link} href="#" className="block text-[#8b8b9e] hover:text-[#00f0ff] transition-colors text-sm">{link}</a>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="font-display font-bold mb-4">التقنيات المستخدمة</h4>
+                            <div className="flex flex-wrap gap-2">
+                                {['React', 'Three.js', 'Tailwind CSS', 'OpenRouter', 'GitHub Pages'].map(tech => (
+                                    <span key={tech} className="px-3 py-1 rounded-full glass text-xs text-[#8b8b9e]">{tech}</span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="border-t border-[rgba(255,255,255,0.06)] pt-8 text-center text-[#4a4a5e] text-sm">
+                        <p>تم بناؤه بـ <i className="fas fa-heart text-[#ff2d95] mx-1"></i> باستخدام أحدث التقنيات | مستضاف مجاناً على GitHub Pages</p>
+                        <p className="mt-2 text-xs">جميع النماذج المجانية متاحة عبر <a href="https://openrouter.ai" target="_blank" className="text-[#00f0ff] hover:underline">OpenRouter</a></p>
+                    </div>
+                </div>
+            </footer>
+        );
+
+        // ==================== MAIN APP ====================
+        const App = () => {
+            const [selectedAgent, setSelectedAgent] = useState(AGENTS[0]);
+            const [selectedModel, setSelectedModel] = useState(MODELS[0]);
+            const [apiKey, setApiKey] = useState(() => localStorage.getItem('openrouter_api_key') || '');
+            const [showApiModal, setShowApiModal] = useState(false);
+
+            useEffect(() => {
+                initThreeBackground();
+            }, []);
+
+            const handleSaveApiKey = (key) => {
+                setApiKey(key);
+                localStorage.setItem('openrouter_api_key', key);
+            };
+
+            return (
+                <div className="relative min-h-screen">
+                    <div className="fixed inset-0 mesh-gradient pointer-events-none z-[1]"></div>
+
+                    <div className="relative z-10">
+                        <Navbar onApiClick={() => setShowApiModal(true)} />
+
+                        <Hero />
+
+                        <section id="agents" className="px-6 py-20">
+                            <div className="max-w-7xl mx-auto">
+                                <div className="text-center mb-16">
+                                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6">
+                                        <i className="fas fa-sparkles text-[#00f0ff]"></i>
+                                        <span className="text-sm text-[#8b8b9e]">6 وكلاء متخصصين</span>
+                                    </div>
+                                    <h2 className="font-display font-black text-4xl md:text-5xl mb-4">
+                                        اختر <span className="text-gradient">وكيلك الذكي</span>
+                                    </h2>
+                                    <p className="text-[#8b8b9e] text-lg max-w-2xl mx-auto">
+                                        كل وكيل متخصص في مجال مختلف مع قدرات فريدة
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {AGENTS.map((agent, i) => (
+                                        <AgentCard
+                                            key={agent.id}
+                                            agent={agent}
+                                            isSelected={selectedAgent.id === agent.id}
+                                            onClick={() => setSelectedAgent(agent)}
+                                            index={i}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="px-6 py-20">
+                            <div className="max-w-7xl mx-auto">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                    <div className="lg:col-span-2">
+                                        <div className="mb-6">
+                                            <h2 className="font-display font-black text-3xl mb-2">
+                                                <span className="text-gradient-blue">المحادثة</span> الذكية
+                                            </h2>
+                                            <p className="text-[#8b8b9e]">ابدأ محادثتك مع {selectedAgent.name}</p>
+                                        </div>
+                                        <ChatInterface 
+                                            selectedAgent={selectedAgent} 
+                                            selectedModel={selectedModel.id}
+                                            apiKey={apiKey}
+                                            onApiRequired={() => setShowApiModal(true)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <div id="models" className="glass-strong rounded-3xl p-6">
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#b829dd] to-[#ff2d95] flex items-center justify-center">
+                                                    <i className="fas fa-microchip text-white"></i>
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-display font-bold">النماذج</h3>
+                                                    <p className="text-[#4a4a5e] text-xs">اختر نموذج AI</p>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {MODELS.map(model => (
+                                                    <ModelCard
+                                                        key={model.id}
+                                                        model={model}
+                                                        isSelected={selectedModel.id === model.id}
+                                                        onClick={() => setSelectedModel(model)}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="glass rounded-3xl p-6">
+                                            <h3 className="font-display font-bold mb-4 flex items-center gap-2">
+                                                <i className="fas fa-info-circle text-[#00f0ff]"></i>
+                                                معلومات
+                                            </h3>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-[#8b8b9e]">الوكيل الحالي</span>
+                                                    <span className="font-medium">{selectedAgent.name}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-[#8b8b9e]">النموذج</span>
+                                                    <span className="font-medium font-mono text-xs">{selectedModel.name}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-[#8b8b9e]">حالة API</span>
+                                                    <span className={`flex items-center gap-1.5 ${apiKey ? 'text-[#00e676]' : 'text-[#ff2d95]'}`}>
+                                                        <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+                                                        {apiKey ? 'متصل' : 'غير متصل'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="glass rounded-3xl p-6">
+                                            <h3 className="font-display font-bold mb-4">المميزات</h3>
+                                            <div className="space-y-3">
+                                                {[
+                                                    { icon: 'fa-bolt', text: 'ردود فورية بتدفق مباشر' },
+                                                    { icon: 'fa-shield-alt', text: 'تشفير كامل للبيانات' },
+                                                    { icon: 'fa-infinity', text: 'محادثات غير محدودة' },
+                                                    { icon: 'fa-download', text: 'تصدير المحادثات' },
+                                                    { icon: 'fa-moon', text: 'وضع داكن احترافي' },
+                                                    { icon: 'fa-mobile-alt', text: 'تصميم متجاوب' },
+                                                ].map((feat, i) => (
+                                                    <div key={i} className="flex items-center gap-3 text-sm text-[#8b8b9e]">
+                                                        <i className={`fas ${feat.icon} text-[#00f0ff] w-5`}></i>
+                                                        {feat.text}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <Footer />
+                    </div>
+
+                    <ApiKeyModal
+                        isOpen={showApiModal}
+                        onClose={() => setShowApiModal(false)}
+                        onSave={handleSaveApiKey}
+                        currentKey={apiKey}
+                    />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
